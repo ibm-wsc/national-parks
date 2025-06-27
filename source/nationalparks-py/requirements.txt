@@ -1,7 +1,7 @@
 mod_wsgi
 Flask
 flask-restful
-pymongo
+pymongo<=4.10.1 
 itsdangerous
 Jinja2
 werkzeug
