@@ -7,7 +7,7 @@ import re
 from flask import Flask, request
 from flask_restful import Resource, Api
 
-from pymongo import MongoClient, GEO2D
+from pymongo import MongoClient, GEOSPHERE  # Changed from GEO2D to GEOSPHERE
 
 DB_URI = os.environ.get('DB_URI')
 
@@ -15,10 +15,10 @@ DB_HOST = os.environ.get('DB_HOST', 'mongodb-nationalparks')
 DB_SERVICE_NAME = os.environ.get('DATABASE_SERVICE_NAME')
 
 if os.environ.get('uri'):
-	match = re.match("mongodb?:\/\/([^:^/]*):?(\d*)?", os.environ.get('uri'))
+    match = re.match("mongodb?:\/\/([^:^/]*):?(\d*)?", os.environ.get('uri'))
     
-	if match:
-		DB_HOST = match.group(1)	
+    if match:
+        DB_HOST = match.group(1)	
 
 if DB_SERVICE_NAME:
     DB_HOST = DB_SERVICE_NAME
@@ -65,7 +65,9 @@ class DataLoad(Resource):
         collection = database.nationalparks
 
         collection.delete_many({})
-        collection.create_index([('Location', GEO2D)])
+        
+        # Updated for MongoDB 8.2: Use 2dsphere index instead of 2d
+        collection.create_index([('Location', GEOSPHERE)])
 
         with open(DATASET_FILE, 'r') as fp:
             entries = []
@@ -73,7 +75,12 @@ class DataLoad(Resource):
             for data in fp.readlines():
                 entry = json.loads(data)
 
-                loc = [entry['coordinates'][1], entry['coordinates'][0]]
+                # Updated for MongoDB 8.2: Use GeoJSON format
+                # Changed from [lon, lat] array to GeoJSON Point
+                loc = {
+                    'type': 'Point',
+                    'coordinates': [entry['coordinates'][1], entry['coordinates'][0]]  # [longitude, latitude]
+                }
                 entry['Location'] = loc
 
                 entries.append(entry)
@@ -120,10 +127,18 @@ class DataWithin(Resource):
     def get(self):
         args = request.args
 
+        # Updated for MongoDB 8.2: Use $geoWithin with $box instead of deprecated $within
         box = [[float(args['lon1']), float(args['lat1'])],
                [float(args['lon2']), float(args['lat2'])]]
 
-        query = {'Location': {'$within': {'$box': box}}}
+        # Modern geospatial query for MongoDB 8.2
+        query = {
+            'Location': {
+                '$geoWithin': {
+                    '$box': box
+                }
+            }
+        }
 
         client = MongoClient(DB_URI)
         database = client[DB_NAME]

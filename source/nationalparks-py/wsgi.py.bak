@@ -49,7 +49,7 @@ class Info(Resource):
         'id': 'nationalparks-py',
         'displayName': 'National Parks (PY)',
         'type': 'cluster',
-        'center': {'latitude': '47.039304', 'longitude': '14.505178'},
+        'center': {'latitude': '39.833333', 'longitude': '-98.583333'},
         'zoom': 4
     }
 
@@ -96,7 +96,7 @@ def format_result(entries):
         data = {}
 
         data['id'] = entry['name']
-        data['link] = entry['link]
+        data['url'] = entry['url']
         data['latitude'] = str(entry['coordinates'][0])
         data['longitude'] = str(entry['coordinates'][1])
         data['name'] = entry['toponymName']
@@ -104,6 +104,7 @@ def format_result(entries):
         result.append(data)
 
     return result
+
 
 class DataAll(Resource):
     def get(self):
